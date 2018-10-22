@@ -55,6 +55,13 @@ const Santi = (()=>{
       `Instead, it was a '${errorType}'.`
     );
   }
+  /* Takes an array of lone elements and makes each one the parent of the next: */
+  function elemArrayToWraps(elems) {
+    for (let i = 1, len = elems.length; i < len; ++i) {
+      elems[i-1].appendChild(elems[i]);
+    }
+    return elems;
+  }
   /* Turns functions, arrays, and strings into element wrapper chains, using
    * delazyNode.
    * The first parameter, wrapSpec, is used to determine what the structure
@@ -87,13 +94,6 @@ const Santi = (()=>{
     elemArrayToWraps(newWraps);
     return newWraps;
   }
-  /* Takes an array of lone elements and makes each one the parent of the next: */
-  function elemArrayToWraps(elems) {
-    for (let i = 1, len = elems.length; i < len; ++i) {
-      elems[i-1].appendChild(elems[i]);
-    }
-    return elems;
-  }
   function getWrapsAround(node) {
     /* We read the wrappers inside-out, but want to return them outside-in: */
     const revWrappers = [];
@@ -114,6 +114,37 @@ const Santi = (()=>{
     }
     return wrappers;
   }
+  function getWrapsDirection(node, direction) {
+    if (direction === undefined) return [node];
+    else if (typeof direction === 'function') {
+      return direction(node);
+    } else if (typeof direction === 'string') {
+      switch (direction) {
+        case 'self':
+          return [node];
+        case 'around': case 'ancestors':
+          return getWrapsAround(node);
+        case 'within': case 'descendants':
+          return getWrapsWithin(node);
+        default:
+          throw new Error(`Unexpected direction string "${direction}"!`);
+      }
+    } else if (Array.isArray(direction)) {
+      /* If given an array of directions, e.g. `['around', 'self']`, give the
+       * concatenation of those individual results: */
+      const wraps = [];
+      for (const subDir of direction) {
+        const subWraps = getWrapsDirection(node, subDir);
+        for (const node of subWraps) wraps.push(node);
+      }
+      return wraps;
+    } else {
+      throw new TypeError(
+        'Wrapping direction must be a function, array, or string.'
+      );
+    }
+  }
+
   function clearChildren(parent) {
     while (true) {
       const child = parent.firstChild;
@@ -150,7 +181,7 @@ const Santi = (()=>{
     return [outer1, inner1, outer2, inner2];
   }
   function swapNodes(node1, node2) {
-    swapParentsAndChildren(node1, node1, node2, node2);
+    if (node1 !== node2) swapParentsAndChildren(node1, node1, node2, node2);
     return [node1, node2];
   }
   /* Accepts 2 arrays of wrapper chains (elements containing only the next
@@ -221,26 +252,9 @@ const Santi = (()=>{
       swapNodes(node, delazyNode(replacement, node));
     },
     replaceWraps: ({direction, replacement}) => node => {
-      let oldWraps;
-      if (direction === undefined) oldWraps = [node];
-      else if (typeof direction === 'function') {
-        oldWraps = direction(node);
-      } else if (typeof direction === 'string') {
-        switch (direction) {
-          case 'self':
-            oldWraps = [node]; break;
-          case 'around': case 'ancestors':
-            oldWraps = getWrapsAround(node); break;
-          case 'within': case 'descendants':
-            oldWraps = getWrapsWithin(node); break;
-          default:
-            throw new Error(`Unexpected direction string "${direction}"!`);
-        }
-      } else {
-        throw new TypeError('Wrapping direction must be a function or string!');
-      }
-
-      swapWraps(oldWraps, delazyWraps(replacement, oldWraps));
+      const oldWraps = getWrapsDirection(node, direction);
+      const newWraps = delazyWraps(replacement, oldWraps);
+      swapWraps(oldWraps, newWraps);
     },
     wrapWith: wrapper => node => wrap(node, wrapper),
     wrapChildrenWith: wrapper => parent => wrapInner(parent, wrapper),
@@ -322,7 +336,8 @@ const Santi = (()=>{
       remove: true,
       /* Remove all text nodes that contain non-displayed whitespace: */
       onlyIf(text) {
-        if (!/^\s*$/.test(text.data)) return false;
+        if (text.data === '') return true;
+        if (!/^\s+$/.test(text.data)) return false;
         const range = document.createRange();
         range.selectNodeContents(text);
         const rect = range.getBoundingClientRect();
@@ -342,7 +357,7 @@ const Santi = (()=>{
             if (style.textDecoration.includes('underline')) newWraps.add('u');
             if (style.textDecoration.includes('line-through')) newWraps.add('strike');
           }
-          return Array.from(newWraps);
+          return [...Array.from(newWraps), ...oldWraps];
         }
       }
     }
