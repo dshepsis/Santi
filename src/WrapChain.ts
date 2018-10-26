@@ -1,13 +1,10 @@
-/* Monad for handling nodes isomorphically with nodes directly wrapping around
- * other nodes: */
-type AppendableNode = Element | DocumentFragment;
-function isAppendable(node: Node): node is AppendableNode {
-    return (node instanceof Element || node instanceof DocumentFragment);
-}
-type NodeTest = (node: Node) => boolean;
-type NodeExpander = (node: Node) => Node[];
+import * as DOMT from 'DOM_TYPES';
 
-class WrapChain {
+/**
+ * Monad for handling nodes isomorphically with nodes directly wrapping around
+ * other nodes.
+ */
+export class WrapChain {
   readonly nodes: Node[] = [];
   get length() { return this.nodes.length; }
   get outerNode(): Node|null { return this.nodes[0] || null; }
@@ -77,9 +74,9 @@ class WrapChain {
   }
   static getWraps(
     node: Node,
-    direction: string|string[]|NodeExpander,
+    direction: string|string[]|DOMT.NodeExpander,
     options: {
-      trim?: NodeTest
+      trim?: DOMT.NodeTest
     } = {}
   ): Node[] {
     let wraps;
@@ -133,9 +130,9 @@ class WrapChain {
   }
   static fromNode(
     node: Node,
-    direction: string|string[]|NodeExpander,
+    direction: string|string[]|DOMT.NodeExpander,
     options: {
-      trim?: NodeTest
+      trim?: DOMT.NodeTest
     } = {}
   ): WrapChain {
     const chain = WrapChain.getWraps(node, direction, options);
@@ -156,10 +153,10 @@ class WrapChain {
     return nodeOrChain.innerNode;
   }
 
-  [Symbol.iterator](): IterableIterator<Node> {
+  [Symbol.iterator](): Iterable<Node> {
     return this.nodes[Symbol.iterator]();
   }
-  *elementIter(): IterableIterator<Element> {
+  *elementIter(): Iterable<Element> {
     for (const node of this.nodes) {
       if (node instanceof Element) {
         yield node;
@@ -171,7 +168,7 @@ class WrapChain {
   }
   canAppendChild(): boolean {
     const inner = this.innerNode;
-    return (inner === null) ? false : isAppendable(inner);
+    return (inner === null) ? false : DOMT.isAppendable(inner);
   }
   appendChild(newChild: Node|WrapChain): Node {
     const inner = this.innerNode;
