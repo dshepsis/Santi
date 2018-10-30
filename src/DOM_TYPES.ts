@@ -1,9 +1,13 @@
 /**
  * Section: Custom types and corresponding guards:
  */
-export type AppendableNode = Element | DocumentFragment;
+export type AppendableNode = (Node&ParentNode) | Element | DocumentFragment;
 export function isAppendable(node: Node): node is AppendableNode {
-    return (node instanceof Element || node instanceof DocumentFragment);
+    return (
+      isChildNode(node) ||
+      node instanceof Element ||
+      node instanceof DocumentFragment
+    );
 }
 
 export type NodeTest = (node: Node) => boolean;
