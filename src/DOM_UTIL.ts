@@ -1,4 +1,5 @@
 import * as DOMT from 'DOM_TYPES';
+import {WrapChain} from 'WrapChain';
 
 type ElementContent = Node|string|Iterable<Node|string>;
 /**
@@ -265,12 +266,11 @@ export function transferChildren(parents: {from: Node, to: DOMT.AppendableNode})
   }
 }
 
-// @Not exported
 /**
  * Swaps the parents of outer 1 and 2, and the children of inner 1 and 2.
  * This is a generalization of swapNodes and swapWraps.
  */
-function swapParentsAndChildren(
+export function swapParentsAndChildren(
   outer1: Node, inner1: Node, outer2: Node, inner2: Node
 ) {
   const parent1 = outer1.parentElement;
@@ -474,4 +474,8 @@ export function selectNodes(
   } else {
     throw new TypeError('Selector modifier must be a string!');
   }
+}
+
+export function docFragFromString(docString: string) {
+  return document.createRange().createContextualFragment(docString);
 }

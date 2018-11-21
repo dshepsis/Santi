@@ -1,4 +1,5 @@
 import * as DOMT from 'DOM_TYPES';
+import * as DOMU from 'DOM_UTIL';
 
 /**
  * Monad for handling nodes isomorphically with nodes directly wrapping around
@@ -30,7 +31,7 @@ export class WrapChain {
       if (numChildren !== 1) {
         throw new TypeError(
           'Node wrap chains must be composed of nodes containing only ' +
-          `subsequent nodes. However, the node at index ${i} had ` +
+          `the subsequent node. However, the node at index ${i} had ` +
           `${numChildren} children.`
         );
       }
@@ -128,6 +129,10 @@ export class WrapChain {
     }
     return wraps;
   }
+  /**
+   * Generate a WrapChain from a node in the DOM and a direction in which to
+   * search for wrappers (within or around). Uses `WrapChain.getWraps`.
+   */
   static fromNode(
     node: Node,
     direction: string|string[]|DOMT.NodeExpander,
@@ -137,6 +142,16 @@ export class WrapChain {
   ): WrapChain {
     const chain = WrapChain.getWraps(node, direction, options);
     return new WrapChain(chain);
+  }
+  /**
+   * Generate a WrapChain from a lazy wrap specification.
+   * See `DOM_UTIL.delazyWraps` for details.
+   */
+  static fromLazy(spec: any, lazyArg?: any): WrapChain {
+    if (lazyArg instanceof WrapChain) {
+      lazyArg = lazyArg.nodes;
+    }
+    return new WrapChain(DOMU.delazyWraps(spec, lazyArg));
   }
 
   /* Helper functions for isomorphically handling Nodes and NodeWrapChains: */
@@ -188,7 +203,7 @@ export class WrapChain {
     }
     const childOuter = WrapChain.getOuterNode(child);
     if (childOuter === null) {
-      throw new Error('Cannot append empty WrapChain!');
+      throw new Error('Cannot remove empty child!');
     }
     return inner.removeChild(childOuter);
   }
@@ -202,5 +217,56 @@ export class WrapChain {
       throw new Error('Cannot append this empty WrapChain!');
     }
     return parentInner.appendChild(outer);
+  }
+  /**
+   * Swaps this WrapChain with a given node or WrapChain in the DOM, by swapping
+   * their respective parents and children.
+   */
+  swapWith(node: Node|WrapChain) {
+    const myOuter = this.outerNode;
+    const myInner = this.innerNode;
+    const nodeOuter = WrapChain.getOuterNode(node);
+    const nodeInner = WrapChain.getInnerNode(node);
+    /* If either this or the parameter node are empty, unwrap the other one: */
+    if (myOuter === null || myInner === null) {
+      if (nodeOuter === null || nodeInner === null) {
+        /* If both this and the parameter node are empty, do nothing */
+        return;
+      }
+      DOMU.unwrap(nodeOuter, nodeInner);
+    } else if (nodeOuter === null || nodeInner === null) {
+      DOMU.unwrap(myOuter, myInner);
+    } else {
+      DOMU.swapParentsAndChildren(myOuter, myInner, nodeOuter, nodeInner);
+    }
+  }
+  /** Inserts this WrapChain between a given node or WrapChain and its parent. */
+  wrap(node: Node|WrapChain) {
+    const nodeOuter = WrapChain.getOuterNode(node);
+    if (nodeOuter === null) {
+      throw new TypeError('Cannot wrap WrapChain around empty node!');
+    }
+    const myOuter = this.outerNode;
+    if (myOuter === null) {
+      throw new TypeError('Cannot wrap empty WrapChain around node!');
+    }
+    const nodeParent = nodeOuter.parentNode;
+    if (nodeParent !== null) {
+      nodeParent.insertBefore(myOuter, nodeOuter);
+    }
+    this.appendChild(node);
+  }
+  /** Inserts this WrapChain between a given node or WrapChain and its children. */
+  wrapInner(node: Node|WrapChain) {
+    const nodeInner = WrapChain.getInnerNode(node);
+    if (nodeInner === null) {
+      throw new TypeError('Cannot wrap WrapChain around empty node!');
+    }
+    const myInner = this.innerNode;
+    if (myInner === null || !DOMT.isAppendable(myInner)) {
+      throw new TypeError('Cannot wrap empty or unappendable WrapChain within node!');
+    }
+    DOMU.transferChildren({from: nodeInner, to: myInner});
+    this.appendThisTo(node);
   }
 }
