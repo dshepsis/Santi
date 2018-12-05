@@ -40,32 +40,3 @@ export function getFirstKey<T extends object>(obj: T, keys: (keyof T)[]) {
   }
   return null;
 }
-
-/**
- * Given an iterable of wrapper elements, returns an array of semantic
- * elements based on the styles of the wrappers
- */
-export function semantifyWraps(oldWraps: Iterable<Node>) {
-  const newWraps = new Set();
-  for (const oldWrap of oldWraps) {
-    if (!(oldWrap instanceof HTMLElement)) {
-      continue;
-    }
-    const style = oldWrap.style;
-    if (Number(style.fontWeight) >= 600) {
-      newWraps.add('strong');
-    }
-    if (style.fontStyle && ['italic', 'oblique'].includes(style.fontStyle)) {
-      newWraps.add('em');
-    }
-    if (style.textDecoration) {
-      if (style.textDecoration.includes('underline')) {
-        newWraps.add('u');
-      }
-      if (style.textDecoration.includes('line-through')) {
-        newWraps.add('strike');
-      }
-    }
-  }
-  return Array.from(newWraps);
-}

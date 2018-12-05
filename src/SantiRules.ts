@@ -1,5 +1,5 @@
 import * as DOMT from 'DOM_Types';
-import {semantifyWraps} from 'OTHER_UTIL';
+import {semantify} from 'rules/semantify';
 /**
  * Indicates a step in the execution of a Santi ruleset. Based on the given
  * selection and filters, the given operation will be performed with the given
@@ -40,13 +40,6 @@ export const STANDARD: {[name: string]: SantiRule} = Object.freeze({
       return (rect.width === 0 && rect.height === 0);
     }
   },
-  semantify: [
-    {
-      select: 'span',
-      wrapWraps: {
-        direction: ['self', 'inner'],
-        replacement: semantifyWraps
-      }
-    }
-  ]
+  /* Externally defined rules: */
+  semantify
 });
