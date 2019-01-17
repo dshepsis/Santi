@@ -1,15 +1,22 @@
 import * as DOMT from 'DOM_Types';
+import {ComplexSelection} from 'DOM_UTIL';
 import {semantify} from 'rules/semantify';
+
 /**
  * Indicates a step in the execution of a Santi ruleset. Based on the given
  * selection and filters, the given operation will be performed with the given
  * configuration parameters.
  */
 export interface SantiRule {
-  select?: string;
+  select?: string|ComplexSelection;
+  defaultSelect?: string|ComplexSelection;
   except?: DOMT.NodeTest;
   onlyIf?: DOMT.NodeTest;
-  [operationName: string]: any;
+  op?: string;
+  arg?: any;
+
+  /* An optional identifier used in error messaged: */
+  name?: string;
 }
 /**
  * A ruleset for Santi must be specified as an array of SantiRules, or an array
@@ -22,10 +29,10 @@ export interface SantiRuleset extends Array<SantiRule|SantiRuleset> {
  * A dictionary of standard Santi Rules which can be combined to accomplish
  * most common tasks.
  */
-export const STANDARD: {[name: string]: SantiRule} = Object.freeze({
+export const STANDARD: {[name: string]: SantiRule|SantiRuleset} = Object.freeze({
   removeVoidWhitespace: {
     select: '#text',
-    remove: true,
+    op: 'remove',
     /* Remove all text nodes that contain non-displayed whitespace: */
     onlyIf(text: Text) {
       if (text.data === '') {

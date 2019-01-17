@@ -30,13 +30,3 @@ export function whitelistStr(
   }
   return whitelist(value, ...fnArgs);
 }
-
-/** Returns the first key of `keys` which exists on `obj`, or null if none match: */
-export function getFirstKey<T extends object>(obj: T, keys: (keyof T)[]) {
-  for (const key of keys) {
-    if (key in obj) {
-      return key;
-    }
-  }
-  return null;
-}

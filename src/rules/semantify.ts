@@ -1,5 +1,7 @@
-type stringTest = (str: String) => boolean;
+import {SantiRuleset} from '../SantiRules';
 
+
+type stringTest = (str: String) => boolean;
 /**
  * Checks if the given style property has the given value, and removes the
  * property if it does.
@@ -172,19 +174,21 @@ export const ALLOWED_SPAN_STYLES = Object.freeze(
   [...SemantifierData.checkedProperties(), 'color']
 );
 
-export const semantify = [
+export const semantify: SantiRuleset = [
   {
     select: 'span',
-    allowStyles: ALLOWED_SPAN_STYLES
+    op: 'allowStyles',
+    arg: ALLOWED_SPAN_STYLES
   },
   {
-    wrapWraps: {
+    op: 'wrapWraps',
+    arg: {
       direction: ['self', 'inner'],
       replacement: semantifyWraps
     }
   },
   {
-    unwrap: true,
+    op: 'unwrap',
     onlyIf(span: HTMLElement) {
       return ['', null].includes(span.getAttribute('style'));
     }

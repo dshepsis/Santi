@@ -1,5 +1,4 @@
 import * as DOMT from 'DOM_TYPES';
-import {WrapChain} from 'WrapChain';
 
 type ElementContent = Node|string|Iterable<Node|string>;
 /**

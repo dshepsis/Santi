@@ -20,9 +20,9 @@ export interface OperationLibrary {
 const STANDARD: OperationLibrary = {
   /** Simply executes a callback on each selected node: */
   forEach: callback => node => callback(node),
-  /** If `active` is truthy, removes selected nodes (and their children) */
-  remove: active => node => {
-    if (active && DOMT.isChildNode(node)) {
+  /** Removes selected nodes and their children */
+  remove: () => node => {
+    if (DOMT.isChildNode(node)) {
       node.remove();
     }
   },
@@ -65,11 +65,9 @@ const STANDARD: OperationLibrary = {
       DOMU.wrapInner(parent, DOMU.delazyNode(wrapper, parent));
     }
   },
-  /** If `active` is truthy, replaces a node with its children. */
-  unwrap: active => node => {
-    if (active) {
-      DOMU.unwrap(node);
-    }
+  /** Replaces a node with its children. */
+  unwrap: () => node => {
+    DOMU.unwrap(node);
   },
   /**
    * Removes all *inline* styles properties except those properties in the
@@ -261,9 +259,9 @@ const STANDARD: OperationLibrary = {
       throw new TypeError('Attribute blacklist must be an array or object!');
     }
   },
-  /** If `active` is truthy, removes all empty attributes from selected elements. */
-  removeEmptyAttributes: active => elem => {
-    if (!active || !(elem instanceof HTMLElement)) {
+  /** Removes all empty attributes from selected elements. */
+  removeEmptyAttributes: () => elem => {
+    if (!(elem instanceof HTMLElement)) {
       return;
     }
     const attrs = elem.attributes;

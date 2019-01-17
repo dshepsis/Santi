@@ -2,7 +2,6 @@ import * as DOMT from 'DOM_TYPES';
 import * as Operations from 'SantiOperations';
 import {SantiRuleset} from 'SantiRules';
 import {selectNodes} from 'DOM_UTIL';
-import {getFirstKey} from 'OTHER_UTIL';
 
 /**
  * Accepts a declarative ruleset used to transform a DOM tree.
@@ -31,12 +30,14 @@ export class Santi {
     selection?: Node[]
   ) {
     let currentSelection: Node[]|undefined = selection;
-    for (const rule of ruleset) {
+    for (let i = 0, len = ruleset.length; i < len; ++i) {
+      const rule = ruleset[i];
       if (Array.isArray(rule)) {
         /* Recursively execute nested rulesets: */
         this.execute(root, rule, currentSelection);
         continue;
       }
+      let selectionChanged = false;
       /* If the rule has a select property, overwrite the currentSelection.
        * otherwise, carry forward with the previous selection: */
       let rawSelection;
@@ -44,9 +45,15 @@ export class Santi {
         /* Iterate over the raw selection and apply filters: */
         rawSelection = selectNodes(root, rule.select);
       } else if (currentSelection === undefined) {
-        throw new Error(
-          'Cannot begin Santi ruleset with rule that makes no selection!'
-        );
+        /* The defaultSelect property allows rules to state a selector which is
+         * only evaluated if there is not already a selection: */
+        if (rule.defaultSelect) {
+          rawSelection = selectNodes(root, rule.defaultSelect);
+        } else {
+          throw new Error(
+            'Cannot begin Santi ruleset with rule that makes no selection!'
+          );
+        }
       } else {
         rawSelection = currentSelection;
       }
@@ -54,6 +61,7 @@ export class Santi {
       const ruleHasFilters = (rule.onlyIf || rule.except);
       if (ruleHasFilters) {
         currentSelection = [];
+        selectionChanged = true;
         for (const node of rawSelection) {
           /* If rule.onlyIf is undefined, then the node is allowed by default: */
           const allowed = (!rule.onlyIf || rule.onlyIf(node));
@@ -68,19 +76,33 @@ export class Santi {
          * We must use Array.from because the iterator provided by selectNodes
          * may not be compatible with removing or replacing nodes in-place: */
         currentSelection = Array.from(rawSelection);
+        selectionChanged = true;
       }
 
-      const operationName = getFirstKey(rule, Object.keys(this.operations));
-      if (operationName === null) {
-        /* If a rule has no operation, move on to the next rule. This may be
-         * done to change or filter the selection without applying a
-         * transformation. */
-        continue;
+      const operationName = rule.op;
+      if (!operationName) {
+        /* Rules without operations are allowed if they alter the selection. */
+        if (selectionChanged) {
+          continue;
+        }
+        const errName = (rule.name) ? `with name ${rule.name}} ` : '';
+        throw new Error(
+          `Rules must alter the selection or perform an operation, but ` +
+          `rule ${i} of ${len} ${errName}in the current ruleset the did not.`
+        );
       }
       /* Apply the operation to all nodes in the filtered selection: */
-      const operation = this.operations[operationName](rule[operationName]);
+      const operation = this.operations[operationName];
+      if (!operation) {
+        const errName = (rule.name) ? `with name ${rule.name}} ` : '';
+        throw new Error(
+          `Rule ${i} of ${len} ${errName} had an unrecognized operation name ` +
+          `"${operationName}".`
+        );
+      }
+      const configuredOp = operation(rule.arg);
       for (const node of currentSelection) {
-        operation(node);
+        configuredOp(node);
       }
     }
     return root;
